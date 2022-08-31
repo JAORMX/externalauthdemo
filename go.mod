@@ -7,7 +7,7 @@ require (
 	github.com/gogo/googleapis v1.4.1
 	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b
 	google.golang.org/genproto v0.0.0-20220829175752-36a9c930ecbf
-	google.golang.org/grpc v1.48.0
+	google.golang.org/grpc v1.49.0
 )
 
 require (
