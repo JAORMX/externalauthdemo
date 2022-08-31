@@ -56,7 +56,8 @@ install-cilium: setup-cilium-helm-repo
 		helm install cilium cilium/cilium --version $(CILIUM_VERSION) \
 			--namespace $(CILIUM_INSTALL_NS) \
 			--set image.pullPolicy=IfNotPresent \
-			--set ipam.mode=kubernetes
+			--set ipam.mode=kubernetes \
+			--set ingressController.enabled=true
 
 .PHONY: cilium-status
 cilium-status:
