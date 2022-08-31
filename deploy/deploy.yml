@@ -1,0 +1,28 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: externalauthdemo
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: externalauthdemo
+  namespace: externalauthdemo
+spec:
+  selector:
+    matchLabels:
+      app: externalauthdemo
+  template:
+    metadata:
+      labels:
+        app: externalauthdemo
+    spec:
+      hostNetwork: true
+      containers:
+      - name: externalauthdemo
+        image: ghcr.io/jaormx/externalauthdemo:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 50666
+          protocol: TCP

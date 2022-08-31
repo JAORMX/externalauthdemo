@@ -35,6 +35,13 @@ load-demo-container: image kind-up
 	@echo "\n>>> Loading demo container into kind cluster '$(KIND_CLUSTER_NAME)'\n"
 	kind load docker-image --name $(KIND_CLUSTER_NAME) $(IMAGE_REF)
 
+# Deployment targets
+####################
+
+.PHONY: deploy
+deploy:
+	kubectl apply -f $(GITROOT)/deploy/deploy.yml
+
 # Cilium targets
 #################
 
@@ -82,4 +89,15 @@ kind-down:
 ########################
 
 .PHONY: test-env-setup
-test-env-setup: kind-up load-cilium-container install-cilium cilium-status load-demo-container
+test-env-setup: kind-up load-cilium-container install-cilium cilium-status load-demo-container deploy load-test-app-container setup-test-app
+
+.PHONY: load-test-app-container
+load-test-app-container: kind-up
+	@echo "\n>>> Loading test app container into kind cluster '$(KIND_CLUSTER_NAME)'\n"
+	docker pull jmalloc/echo-server:latest
+	kind load docker-image --name $(KIND_CLUSTER_NAME) jmalloc/echo-server:latest
+
+.PHONY: setup-test-app
+setup-test-app:
+	@echo "\n>>> Setting up test app\n"
+	kubectl apply -f $(GITROOT)/tests/app/app.yml
