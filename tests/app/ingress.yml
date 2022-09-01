@@ -20,53 +20,26 @@ spec:
   backendServices:
     - name: echo-service
       namespace: my-app
-      number:
-      - "80"
   resources:
     - '@type': type.googleapis.com/envoy.config.listener.v3.Listener
       name: cilium-ingress-my-app-basic-ingress
       filterChains:
-      - filterChainMatch:
-          transportProtocol: raw_buffer
-        filters:
+      - filters:
         - name: envoy.filters.network.http_connection_manager
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
             httpFilters:
-              - name: envoy.filters.http.ext_authz
-                typedConfig:
-                  "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
-                  transportApiVersion: V3
-                  grpcService:
-                    envoyGrpc:
-                      clusterName: ext-authz
+              #- name: envoy.filters.http.ext_authz
+              #  typedConfig:
+              #    "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+              #    transportApiVersion: V3
+              #    grpcService:
+              #      envoyGrpc:
+              #        clusterName: ext-authz
               - name: envoy.filters.http.router
             rds:
               routeConfigName: cilium-ingress-my-app-basic-ingress_route
             statPrefix: cilium-ingress-my-app-basic-ingress
-      listenerFilters:
-        - name: envoy.filters.listener.tls_inspector
-      socketOptions:
-        - description: Enable TCP keep-alive, annotation io.cilium/tcp-keep-alive. (default to enabled)
-          intValue: "1"
-          level: "1"
-          name: "9"
-          state: STATE_LISTENING
-        - description: TCP keep-alive idle time (in seconds). Annotation io.cilium/tcp-keep-alive-idle (defaults to 10s)
-          intValue: "10"
-          level: "6"
-          name: "4"
-          state: STATE_LISTENING
-        - description: TCP keep-alive probe intervals (in seconds). Annotation io.cilium/tcp-keep-alive-probe-interval (defaults to 5s)
-          intValue: "5"
-          level: "6"
-          name: "5"
-          state: STATE_LISTENING
-        - description: TCP keep-alive probe max failures. Annotation io.cilium/tcp-keep-alive-probe-max-failures (defaults to 10)
-          intValue: "10"
-          level: "6"
-          name: "6"
-          state: STATE_LISTENING
     - '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
       name: cilium-ingress-my-app-basic-ingress_route
       virtualHosts:
@@ -75,16 +48,14 @@ spec:
         name: '*'
         routes:
         - match:
-            safeRegex:
-              googleRe2: {}
-              regex: (/.*)?$
+            prefix: '/'
           route:
-            cluster: my-app/echo-service:80
-            maxStreamDuration:
-              maxStreamDuration: 0s
+            cluster: my-app/echo-service
+            #maxStreamDuration:
+            #  maxStreamDuration: 0s
     - '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
       connectTimeout: 5s
-      name: my-app/authenticated-app:9080
+      name: my-app/echo-service
       outlierDetection:
         consecutiveLocalOriginFailure: 2
         splitExternalLocalOriginErrors: true
@@ -94,24 +65,24 @@ spec:
           '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
           useDownstreamProtocolConfig:
             http2ProtocolOptions: {}
-    - '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
-      connectTimeout: 5s
-      name: ext-authz
-      type: STATIC
-      typedExtensionProtocolOptions:
-        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-          '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-          useDownstreamProtocolConfig:
-            http2ProtocolOptions: {}
-      loadAssignment:
-        clusterName: ext-authz
-        endpoints:
-          - lbEndpoints:
-            - endpoint:
-                address:
-                  socketAddress:
-                    address: 127.0.0.1
-                    port_value: 50666
+    #- '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+    #  connectTimeout: 5s
+    #  name: ext-authz
+    #  type: STATIC
+    #  typedExtensionProtocolOptions:
+    #    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+    #      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+    #      useDownstreamProtocolConfig:
+    #        http2ProtocolOptions: {}
+    #  loadAssignment:
+    #    clusterName: ext-authz
+    #    endpoints:
+    #      - lbEndpoints:
+    #        - endpoint:
+    #            address:
+    #              socketAddress:
+    #                address: 127.0.0.1
+    #                port_value: 50666
 
   services:
     - listener: cilium-ingress-my-app-basic-ingress

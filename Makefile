@@ -13,6 +13,7 @@ IMAGE_REF=$(IMAGE_REPO)/$(IMAGE_NAME):$(IMAGE_TAG)
 ##################
 
 CILIUM_VERSION=1.12.1
+HUBBLE_VERSION=0.9.1
 CILIUM_INSTALL_NS?=kube-system
 
 # Metallb variables
@@ -52,9 +53,17 @@ deploy:
 
 .PHONY: load-cilium-container
 load-cilium-container: kind-up
-	@echo "\n>>> Loading Cilium container into kind cluster '$(KIND_CLUSTER_NAME)'\n"
+	@echo "\n>>> Loading Cilium container images into kind cluster '$(KIND_CLUSTER_NAME)'\n"
 	docker pull quay.io/cilium/cilium:v$(CILIUM_VERSION)
 	kind load docker-image --name $(KIND_CLUSTER_NAME) quay.io/cilium/cilium:v$(CILIUM_VERSION)
+	docker pull quay.io/cilium/hubble-relay:v$(CILIUM_VERSION)
+	kind load docker-image --name $(KIND_CLUSTER_NAME) quay.io/cilium/hubble-relay:v$(CILIUM_VERSION)
+	docker pull quay.io/cilium/hubble-ui-backend:v$(HUBBLE_VERSION)
+	kind load docker-image --name $(KIND_CLUSTER_NAME) quay.io/cilium/hubble-ui-backend:v$(HUBBLE_VERSION)
+	docker pull quay.io/cilium/hubble-ui:v$(HUBBLE_VERSION)
+	kind load docker-image --name $(KIND_CLUSTER_NAME) quay.io/cilium/hubble-ui:v$(HUBBLE_VERSION)
+	docker pull quay.io/cilium/operator-generic:v$(CILIUM_VERSION)
+	kind load docker-image --name $(KIND_CLUSTER_NAME) quay.io/cilium/operator-generic:v$(CILIUM_VERSION)
 
 .PHONY: setup-cilium-helm-repo
 setup-cilium-helm-repo:
@@ -67,9 +76,16 @@ install-cilium: setup-cilium-helm-repo
 	helm status --namespace $(CILIUM_INSTALL_NS) cilium || \
 		helm install cilium cilium/cilium --version $(CILIUM_VERSION) \
 			--namespace $(CILIUM_INSTALL_NS) \
+			--set kubeProxyReplacement=partial \
 			--set image.pullPolicy=IfNotPresent \
+			--set externalIPs.enabled=true \
+			--set nodePort.enabled=true \
+			--set hostPort.enabled=true \
 			--set ipam.mode=kubernetes \
-			--set ingressController.enabled=true
+			--set ingressController.enabled=true \
+			--set hubble.listenAddress=":4244" \
+			--set hubble.relay.enabled=true \
+			--set hubble.ui.enabled=true
 
 .PHONY: cilium-status
 cilium-status:
@@ -80,7 +96,7 @@ cilium-status:
 ###############
 
 .PHONY: setup-metallb
-setup-metallb:
+setup-metallb: load-metallb-containers
 	@echo "\n>>> Installing MetalLB\n"
 	kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v$(METALLB_VERSION)/manifests/namespace.yaml
 	kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v$(METALLB_VERSION)/manifests/metallb.yaml
@@ -89,6 +105,16 @@ setup-metallb:
 	kubectl rollout status daemonset -n metallb-system speaker -w || \
 		kubectl rollout status daemonset -n metallb-system speaker -w || \
 		kubectl rollout status daemonset -n metallb-system speaker -w
+	
+	kubectl apply -f $(GITROOT)/tests/envsetup/metallb-config.yml
+
+.PHONY: load-metallb-containers
+load-metallb-containers: kind-up
+	@echo "\n>>> Loading MetalLB container images into kind cluster '$(KIND_CLUSTER_NAME)'\n"
+	docker pull quay.io/metallb/speaker:v$(METALLB_VERSION)
+	kind load docker-image --name $(KIND_CLUSTER_NAME) quay.io/metallb/speaker:v$(METALLB_VERSION)
+	docker pull quay.io/metallb/controller:v$(METALLB_VERSION)
+	kind load docker-image --name $(KIND_CLUSTER_NAME) quay.io/metallb/controller:v$(METALLB_VERSION)
 
 # Kind targets
 ##############
