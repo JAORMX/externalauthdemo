@@ -5,23 +5,11 @@ metadata:
   name: authenticated-app
   namespace: my-app
 spec:
-  allocateLoadBalancerNodePorts: true
-  clusterIP: 10.96.214.162
-  clusterIPs:
-  - 10.96.214.162
-  externalTrafficPolicy: Cluster
-  internalTrafficPolicy: Cluster
-  ipFamilies:
-  - IPv4
-  ipFamilyPolicy: SingleStack
-  ports:
-  - name: http
-    nodePort: 32015
-    port: 80
-    protocol: TCP
-    targetPort: 80
-  sessionAffinity: None
   type: LoadBalancer
+  selector:
+    app: echo-server
+  ports:
+  - port: 80
 ---
 apiVersion: cilium.io/v2
 kind: CiliumEnvoyConfig

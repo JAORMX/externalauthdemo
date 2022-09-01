@@ -15,6 +15,11 @@ IMAGE_REF=$(IMAGE_REPO)/$(IMAGE_NAME):$(IMAGE_TAG)
 CILIUM_VERSION=1.12.1
 CILIUM_INSTALL_NS?=kube-system
 
+# Metallb variables
+###################
+
+METALLB_VERSION=0.12.1
+
 # Kind variables
 ################
 KIND_CLUSTER_NAME?=authtestcluster
@@ -71,6 +76,20 @@ cilium-status:
 	@echo "\n>>> Cilium status\n"
 	cilium status --wait
 
+# Setup Metallb
+###############
+
+.PHONY: setup-metallb
+setup-metallb:
+	@echo "\n>>> Installing MetalLB\n"
+	kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v$(METALLB_VERSION)/manifests/namespace.yaml
+	kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v$(METALLB_VERSION)/manifests/metallb.yaml
+
+	# Wait for rollout status, retry if it's not available yet
+	kubectl rollout status daemonset -n metallb-system speaker -w || \
+		kubectl rollout status daemonset -n metallb-system speaker -w || \
+		kubectl rollout status daemonset -n metallb-system speaker -w
+
 # Kind targets
 ##############
 
@@ -89,7 +108,7 @@ kind-down:
 ########################
 
 .PHONY: test-env-setup
-test-env-setup: kind-up load-cilium-container install-cilium cilium-status load-demo-container deploy load-test-app-container setup-test-app
+test-env-setup: kind-up load-cilium-container install-cilium cilium-status setup-metallb load-demo-container deploy load-test-app-container setup-test-app
 
 .PHONY: load-test-app-container
 load-test-app-container: kind-up
