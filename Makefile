@@ -20,6 +20,11 @@ CILIUM_INSTALL_NS?=kube-system
 ###################
 
 METALLB_VERSION=0.12.1
+KIND_NET_CIDR=$(shell docker network inspect kind -f '{{(index .IPAM.Config 0).Subnet}}')
+METALLB_IP_START=$(shell echo $(KIND_NET_CIDR) | sed "s@0.0/16@255.200@")
+METALLB_IP_END=$(shell echo $(KIND_NET_CIDR) | sed "s@0.0/16@255.250@")
+METALLB_IP_RANGE="$(METALLB_IP_START)-$(METALLB_IP_END)"
+
 
 # Kind variables
 ################
@@ -105,8 +110,7 @@ setup-metallb: load-metallb-containers
 	kubectl rollout status daemonset -n metallb-system speaker -w || \
 		kubectl rollout status daemonset -n metallb-system speaker -w || \
 		kubectl rollout status daemonset -n metallb-system speaker -w
-	
-	kubectl apply -f $(GITROOT)/tests/envsetup/metallb-config.yml
+	sed "s@METAL_IP_RANGE_TMPL@$(METALLB_IP_RANGE)@g" $(GITROOT)/tests/envsetup/metallb-config.yml | kubectl apply -f -
 
 .PHONY: load-metallb-containers
 load-metallb-containers: kind-up
