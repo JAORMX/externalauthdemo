@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/envoyproxy/go-control-plane v0.10.3
 	github.com/gogo/googleapis v1.4.1
-	golang.org/x/net v0.0.0-20220919171627-f8f703f97925
+	golang.org/x/net v0.0.0-20220919232410-f2f64ebce3c1
 	google.golang.org/genproto v0.0.0-20220829175752-36a9c930ecbf
 	google.golang.org/grpc v1.49.0
 )
